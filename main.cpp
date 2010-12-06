@@ -84,8 +84,10 @@ int main (int argc, char * const argv[]) {
 		
 	}
 	
+	cvSet1D(distortion_coeffs, 4, cvScalarAll(0));
 	
-	cvCalibrateCamera2(object_points, image_points, point_counts, cvGetSize(img), camera_matrix, distortion_coeffs);
+	cvCalibrateCamera2(object_points, image_points, point_counts, cvGetSize(img), 
+					   camera_matrix, distortion_coeffs,NULL,NULL,CV_CALIB_FIX_K3 );
 	
 	cout << "camera matrix: " << endl;
 	for (int i=0; i<3; i++)
@@ -104,13 +106,13 @@ int main (int argc, char * const argv[]) {
 	cout << endl;
 	
 	
-	cvSave("Intrinsics.xml",camera_matrix); 
-	cvSave("Distortion.xml",distortion_coeffs);
+	cvSave("Intrinsics_RGB.xml",camera_matrix); 
+	cvSave("Distortion_RGB.xml",distortion_coeffs);
 	
 #else
 	
-	CvMat *camera_matrix = (CvMat*)cvLoad("Intrinsics.xml"); 
-	CvMat *distortion_coeffs = (CvMat*)cvLoad("Distortion.xml"); 
+	CvMat *camera_matrix = (CvMat*)cvLoad("Intrinsics_RGB.xml"); 
+	CvMat *distortion_coeffs = (CvMat*)cvLoad("Distortion_RGB.xml"); 
 	
 	
 	IplImage* map_x = cvCreateImage( cvSize(640,480), IPL_DEPTH_32F, 1 ); 
@@ -135,7 +137,7 @@ int main (int argc, char * const argv[]) {
 //		cvShowImage("original", img);
 		cvShowImage("undistorted", img_undistorted);
 		
-		cvWaitKey(5000);
+		cvWaitKey(1000);
 	}
 #endif
 	
