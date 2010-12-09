@@ -16,7 +16,6 @@ int main (int argc, char * const argv[]) {
 // activate to get intrinsic parameters and distortion for both cameras	
 #define CALIBRATION
 	
-	
 // activate to get stereo calibration (needs CALIBRATION to be activated)
 #define STEREO_CALIBRATION	
 	
