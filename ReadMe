@@ -1,0 +1,46 @@
+
+This is an application to calibrate the Kinect.
+
+Input are pairs of RGB and IR images of a chessboard. 
+The nice thing about this implementation is the lack
+of needed userinput. Since the raw IR-image is used, 
+the chessboardcorners can be detected automatically 
+(at least in about 90% when I tried). 
+
+The images can be easily generated with my fork of
+https://github.com/arturoc/ofxKinect 
+
+ofxKinect is an addon for openFrameworks, so this
+has to be installed for generating these images. 
+(how to generate images is described in my fork)
+
+https://github.com/NikolasE/ofxKinect
+
+
+This calibration uses some functions from openCV, 
+which is the only library needed. 
+
+The code should be self explaining :)
+
+It only expects pairs of RGB and (raw) IR images.
+There is no failcheck if the corners in one image can't
+be detected. If it happens, some error message is printed
+and you should remove these images from the input folder
+(both ir and rgb) and make sure that there is still
+a consecutive order of filenames (i.e. replace the
+deleted images with the ones with the highest number).
+
+All parameters are written in .xml files, more info
+on the used functions and the output format can be found
+at http://opencv.willowgarage.com/documentation/index.html
+
+
+
+License: Modify, distribute and use as you want, only drop
+a line if you find it useful and make clear that the first
+implementation was mine :)
+
+
+
+
+
