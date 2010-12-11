@@ -1,4 +1,13 @@
 
+// Difference to master-branch:
+
+- NOT tested (compiles, runs, values seem ok)
+- different file structure
+- can cope with images where the chessboard can't be found
+- computation of reprojection error via epilines
+
+
+
 This is an application to calibrate the Kinect.
 
 Input are pairs of RGB and IR images of a chessboard. 
@@ -7,14 +16,23 @@ of needed userinput. Since the raw IR-image is used,
 the chessboardcorners can be detected automatically 
 (at least in about 90% when I tried). 
 
-The images can be easily generated with my fork of
-https://github.com/arturoc/ofxKinect 
+Branch testing:
 
-ofxKinect is an addon for openFrameworks, so this
-has to be installed for generating these images. 
-(how to generate images is described in my fork)
+The images are expecting in the folder structure 
+    ($prefix)/view????/color.png and
+    ($prefix)/view????/intensity.png
 
-https://github.com/NikolasE/ofxKinect
+$prefix has to be set in main.cpp
+
+This structure is generated from Nicolas Burrus' Application at:
+http://nicolas.burrus.name/index.php/Research/KinectRgbDemoV2
+
+Just install his application and grab some images. Set $prefix
+on the bin-folder and $image_cnt to the number of pairs. 
+(e.g. max Number +1)
+
+If the chessboard corners can't be found on one image (happens with
+p=0.05 for ir images), the pair is ignored and some warning is printed.
 
 
 This calibration uses some functions from openCV, 
@@ -22,18 +40,10 @@ which is the only library needed.
 
 The code should be self explaining :)
 
-It only expects pairs of RGB and (raw) IR images.
-There is no failcheck if the corners in one image can't
-be detected. If it happens, some error message is printed
-and you should remove these images from the input folder
-(both ir and rgb) and make sure that there is still
-a consecutive order of filenames (i.e. replace the
-deleted images with the ones with the highest number).
 
 All parameters are written in .xml files, more info
 on the used functions and the output format can be found
 at http://opencv.willowgarage.com/documentation/index.html
-
 
 
 License: Modify, distribute and use as you want, only drop

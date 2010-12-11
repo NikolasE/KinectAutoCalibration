@@ -8,6 +8,8 @@
 #include <fstream>
 #include <vector>
 
+#include "calibration_common.h"
+
 using namespace std;
 
 int main (int argc, char * const argv[]) {
@@ -20,57 +22,38 @@ int main (int argc, char * const argv[]) {
 #define STEREO_CALIBRATION	
 	
 // load calibration for one camera and show undistorted images
-//#define VIEW_CALIBRATION
-	
+// #define VIEW_CALIBRATION
 	
 	// theses values depend on the used chessboard
 	const int corner_cnt_x = 10;
 	const int corner_cnt_y = 7;
 	const float square_size = 2.5;
 	
+	int good_picture_cnt = 0;
+	
 	const int corner_cnt = corner_cnt_x*corner_cnt_y;
 	
 	
-	// number of image pairs in img-folder
-	int image_cnt = 3;
+	// adapt this path and the number of imagePairs
+	char prefix[] = "/Users/engelhard/Desktop/rgbdemo-0.2.1-Source/bin/grab1";
 	
+	// images: ($prefix)/view????/color.png
+	// where ???? = %04d, i
+	int image_cnt = 5;
 	
+	cout << "image_cnt: " << image_cnt << endl;
 	
-	char filename[200];
+	char filename_rgb[200];
+	char filename_int[200];
+	
 	CvMat *camera_matrix_ir;
 	CvMat* distortion_coeffs_ir;
 	
 	CvMat *camera_matrix_rgb;
 	CvMat* distortion_coeffs_rgb;
 	
-	/*
-	 // show images pairwise
-	 for (int i=20; i<image_cnt; i++)
-	 {
-	 sprintf(filename,"img/ir_%02d.jpg",i);
-	 IplImage* ir = cvLoadImage(filename, 1);
-	 
-	 sprintf(filename,"img/RGB_%02d.jpg",i);
-	 IplImage* rgb = cvLoadImage(filename, 1);
-	 
-	 cvNamedWindow("ir");
-	 cvNamedWindow("rgb");
-	 
-	 cvShowImage("ir",ir);
-	 cvShowImage("rgb", rgb);
-	 
-	 cvWaitKey(500);
-	 }
-	 
-	 return 0;
-	 */
-	
-	
 	
 #ifdef CALIBRATION
-	
-	IplImage* img;
-	
 	
 	int N = image_cnt*7*10;
 	
@@ -88,117 +71,155 @@ int main (int argc, char * const argv[]) {
 	camera_matrix_ir = cvCreateMat(3,3, CV_32FC1);
 	distortion_coeffs_ir = cvCreateMat(5,1, CV_32FC1);
 	
-	
-	// mode 0 for infrared images
-	// mode 1 for rgb images
-	for (int mode = 0; mode < 2; mode++)
+	for (int i=0; i< image_cnt; i++)
 	{
+		sprintf(filename_rgb,"%s/view%04d/color.png",prefix, i);
+		IplImage* rgb_img = cvLoadImage(filename_rgb, 1);
 		
-		for (int i=0; i<image_cnt; i++)
+		sprintf(filename_int,"%s/view%04d/intensity.png",prefix, i);
+		IplImage* intensity_img = cvLoadImage(filename_int, 1);
+		
+		
+		if (rgb_img == NULL)
 		{
-			if (mode == 0)
-				sprintf(filename,"img/ir_%02d.jpg",i);
-			else
-				sprintf(filename,"img/RGB_%02d.jpg",i);
-			
-			
-			img = cvLoadImage(filename, 1);
-			
-			if (img == NULL)
-			{
-				// should not happen if images are correct
-				cout << "null: " << filename << endl;
-				continue;
-			}
-			
-			CvPoint2D32f corners[corner_cnt];
-			int corner_count;
-			
-			IplImage* bw = cvCreateImage(cvGetSize(img),img->depth,1);
-			cvCvtColor(img, bw, CV_BGR2GRAY);
-			
-			
-			int found = cvFindChessboardCorners(bw, cvSize(corner_cnt_x,corner_cnt_y), corners, &corner_count);
-			//	assert(found>0 && corner_count == 7*10);
-			
-			if (found == 0)
-			{
-				// should not happen, if images are correct
-				cout << "no corners on " << filename << endl;
-			}
-			
-			// refinement of cornercoordinates
-			cvFindCornerSubPix(bw, corners, corner_count, cvSize(7,7), cvSize(-1,-1), cvTermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 30, 0.1));
-			
-			
-			if (mode == 0)
-			{
-				// copy Points into calibration array:
-				for (int j=0; j<corner_cnt; j++)
-				{	
-					cvSetReal2D(object_points, i*corner_cnt+j,0, j%10*square_size); // width and height of small square: 2.5cm
-					cvSetReal2D(object_points, i*corner_cnt+j,1, j/10*square_size);
-					cvSetReal2D(object_points, i*corner_cnt+j,2, 0);
-					
-					cvSetReal2D(image_points_ir, i*corner_cnt+j,0, corners[j].x); 
-					cvSetReal2D(image_points_ir, i*corner_cnt+j,1, corners[j].y);
-					
-				}
-				
-			}
-			else
-			{
-				for (int j=0; j<corner_cnt; j++)
-					
-				{	
-					cvSetReal2D(image_points_rgb, i*corner_cnt+j,0, corners[j].x); 
-					cvSetReal2D(image_points_rgb, i*corner_cnt+j,1, corners[j].y);
-				}
-				
-			}	
-			
-			cvSetReal1D(point_counts, i, corner_count);
-			// activate to see the refined chessboard corners
-			/*
-			 
-			 cvNamedWindow("color.png");
-			 cvDrawChessboardCorners(img, cvSize(10,7), corners, corner_count, found);
-			 cvShowImage("color.png", img);
-			 cvWaitKey(500);
-			 */	
+			cout << "no image named "<< filename_rgb << " found " << endl;
+			continue;
+		}
+		
+		if (intensity_img == NULL)
+		{
+			cout << "no image named "<< filename_int << " found " << endl;
+			continue;
 		}
 		
 		
 		
-		if (mode == 0)
+		int corner_count;
+		
+		CvPoint2D32f corners_rgb[corner_cnt];
+		CvPoint2D32f corners_int[corner_cnt];
+		
+		IplImage* bw = cvCreateImage(cvGetSize(rgb_img),rgb_img->depth,1);
+		
+		// find and correct corners on RGB image
+		cvCvtColor(rgb_img, bw, CV_BGR2GRAY);
+		if (cvFindChessboardCorners(bw, cvSize(corner_cnt_x,corner_cnt_y), corners_rgb, &corner_count) == 0)
 		{
-			
-			// cameras are pretty good, fourth parameter is only for fisheye-cams
-			cvSet1D(distortion_coeffs_ir, 4, cvScalarAll(0));
-			
-			cvCalibrateCamera2(object_points, image_points_ir, point_counts, cvGetSize(img), 
-							   camera_matrix_ir, distortion_coeffs_ir,NULL,NULL,CV_CALIB_FIX_K3 );
-			
-			cvSave("Intrinsics_IR.xml",camera_matrix_ir); 
-			cvSave("Distortion_IR.xml",distortion_coeffs_ir);
-			
-			cout << "infraRed: calibrated" << endl;
+			cout << "no corners on " << filename_rgb << endl;
+			continue;
 		}
-		else
+		cvFindCornerSubPix(bw, corners_rgb, corner_count, cvSize(7,7), cvSize(-1,-1), cvTermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 30, 0.1));
+		
+		
+		// find and correct corners on raw IR image
+		cvCvtColor( intensity_img, bw, CV_BGR2GRAY);
+		if (cvFindChessboardCorners(bw, cvSize(corner_cnt_x,corner_cnt_y), corners_int, &corner_count) == 0)
 		{
-			
-			cvSet1D(distortion_coeffs_rgb, 4, cvScalarAll(0));
-			
-			cvCalibrateCamera2(object_points, image_points_rgb, point_counts, cvGetSize(img), 
-							   camera_matrix_rgb, distortion_coeffs_rgb,NULL,NULL,CV_CALIB_FIX_K3 );
-			
-			cvSave("Intrinsics_RGB.xml",camera_matrix_rgb); 
-			cvSave("Distortion_RGB.xml",distortion_coeffs_rgb);
-			cout << "RGB: calibrated" << endl;
-			
+			cout << "no corners on " << filename_int << endl;
+			continue;
 		}
+		cvFindCornerSubPix(bw, corners_int, corner_count, cvSize(7,7), cvSize(-1,-1), cvTermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 30, 0.1));
+		
+		
+		
+		// copy Points into calibration array:
+		for (int j=0; j<corner_cnt; j++)
+		{	
+			cvSetReal2D(object_points, good_picture_cnt*corner_cnt+j,0, j%corner_cnt_x*square_size); // width and height of small square: 2.5cm
+			cvSetReal2D(object_points, good_picture_cnt*corner_cnt+j,1, j/corner_cnt_x*square_size);
+			cvSetReal2D(object_points, good_picture_cnt*corner_cnt+j,2, 0);
+			
+			cvSetReal2D(image_points_ir, good_picture_cnt*corner_cnt+j,0, corners_rgb[j].x); 
+			cvSetReal2D(image_points_ir, good_picture_cnt*corner_cnt+j,1, corners_rgb[j].y);
+			
+			cvSetReal2D(image_points_rgb, good_picture_cnt*corner_cnt+j,0, corners_int[j].x); 
+			cvSetReal2D(image_points_rgb, good_picture_cnt*corner_cnt+j,1, corners_int[j].y);
+		}
+		
+		cvSetReal1D(point_counts, i, corner_count);
+		
+		good_picture_cnt++;
+		
+		
+		// activate to see the refined chessboard corners
+		
+/*		
+		 cvNamedWindow("color.png");
+		 cvDrawChessboardCorners(rgb_img, cvSize(10,7), corners_rgb, corner_count,1);
+		 cvShowImage("color.png", rgb_img);
+		
+		cvNamedWindow("ir.png");
+		cvDrawChessboardCorners(intensity_img, cvSize(10,7), corners_int, corner_count,1);
+		cvShowImage("ir.png", intensity_img );
+		
+		
+		cvWaitKey(500);
+	*/	 
+		
 		
 	}
+	
+	
+	int found_corner_cnt = good_picture_cnt*corner_cnt;
+	
+	// some images probably have not all corners, so remove the unused space
+	CvMat* object_points_small = cvCreateMat(found_corner_cnt, 3, CV_32FC1);
+	CvMat* image_points_ir_small = cvCreateMat(found_corner_cnt, 2, CV_32FC1);
+	CvMat* image_points_rgb_small = cvCreateMat(found_corner_cnt, 2, CV_32FC1);
+
+	CvMat* point_counts_small = cvCreateMat(good_picture_cnt, 1, CV_32SC1);
+	
+	// TODO: there has to be a smarter way...
+	
+	for (int h=0; h < found_corner_cnt; h++)
+	{
+		float v;
+		for (int w=0; w<2; w++)
+		{
+			v = cvGetReal2D(image_points_ir, h, w);
+			cvSet2D(image_points_ir_small, h, w,cvScalarAll(v));
+			
+			v = cvGetReal2D(image_points_rgb, h, w);
+			cvSet2D(image_points_rgb_small, h, w,cvScalarAll(v));
+			
+			v = cvGetReal2D(object_points, h, w);
+			cvSet2D(object_points_small, h, w, cvScalarAll(v));
+		}
+		// z entry of points on the calibration board:
+		cvSet2D(object_points_small, h,2, cvScalarAll(0));
+	}
+	
+	// number of found corners on each image
+	// images without the complete number of points are not processed
+	for (int h=0; h < good_picture_cnt; h++)
+		cvSetReal1D(point_counts_small, h, corner_cnt);
+	
+	
+	
+	
+	// calibrate both cameras:
+	
+	// cameras are pretty good, fourth parameter is for fisheye-cams only 
+	cvSet1D(distortion_coeffs_ir, 4, cvScalarAll(0));
+	
+	cvCalibrateCamera2(object_points_small, image_points_ir_small, point_counts_small, cvSize(640,480), 
+					   camera_matrix_ir, distortion_coeffs_ir,NULL,NULL,CV_CALIB_FIX_K3 );
+	
+	cvSave("Intrinsics_IR.xml",camera_matrix_ir); 
+	cvSave("Distortion_IR.xml",distortion_coeffs_ir);
+	cout << "infraRed: calibrated" << endl;
+	
+	
+	cvSet1D(distortion_coeffs_rgb, 4, cvScalarAll(0));
+	
+	cvCalibrateCamera2(object_points_small, image_points_rgb_small, point_counts_small, cvSize(640,480), 
+					   camera_matrix_rgb, distortion_coeffs_rgb,NULL,NULL,CV_CALIB_FIX_K3 );
+	
+	cvSave("Intrinsics_RGB.xml",camera_matrix_rgb); 
+	cvSave("Distortion_RGB.xml",distortion_coeffs_rgb);
+	cout << "RGB: calibrated" << endl;
+	
+	
 #endif
 	
 	
@@ -208,25 +229,46 @@ int main (int argc, char * const argv[]) {
 	cout << "Starting Stereo Calibration" << endl;
 	CvMat* R = cvCreateMat(3, 3, CV_32FC1);
 	CvMat* T = cvCreateMat(3, 1, CV_32FC1);
+	CvMat* E = cvCreateMat(3,3,CV_64F);
+	CvMat* F = cvCreateMat(3,3,CV_64F);
+	
+	
 	
 	
 	// the core function:
-	cvStereoCalibrate(object_points, 
-					  image_points_ir, 
-					  image_points_rgb, 
-					  point_counts, 
+	cvStereoCalibrate(object_points_small, 
+					  image_points_ir_small, 
+					  image_points_rgb_small, 
+					  point_counts_small, 
 					  camera_matrix_ir, distortion_coeffs_ir, 
 					  camera_matrix_rgb, distortion_coeffs_rgb, 
-					  cvSize(640,480), R,T,NULL,NULL, cvTermCriteria(CV_TERMCRIT_ITER + CV_TERMCRIT_EPS, 100, 1e-5), CV_CALIB_FIX_INTRINSIC);
+					  cvSize(640,480), 
+					  R,T,E,F, 
+					  cvTermCriteria(CV_TERMCRIT_ITER + CV_TERMCRIT_EPS, 100, 1e-5), CV_CALIB_FIX_INTRINSIC);
 	
-	cout << "R:" << endl;
-	for (int i=0; i<3; i++)
-	{
-		for (int j=0; j<3; j++)
-			cout << cvGet2D(R, i, j).val[0] << " ";
-		cout << endl;
-	}
 	
+	
+	// compute calibration errors: (currently only rgb)
+	double err = computeError(F,
+						 image_points_rgb_small,
+						 image_points_ir_small, 
+						 distortion_coeffs_rgb,
+						 distortion_coeffs_ir, 
+						 camera_matrix_rgb, 
+						 camera_matrix_ir);
+	
+	cout << "Error: " << err << endl;
+	
+	
+	
+	/*	cout << "R:" << endl;
+	 for (int i=0; i<3; i++)
+	 {
+	 for (int j=0; j<3; j++)
+	 cout << cvGet2D(R, i, j).val[0] << " ";
+	 cout << endl;
+	 }
+	 */	
 	cout << "T:" << endl;
 	for (int i=0; i<3; i++)
 	{
@@ -267,9 +309,11 @@ int main (int argc, char * const argv[]) {
 	cvNamedWindow("undistorted");
 	cvNamedWindow("original");
 	
+	char filename[100];
+	
 	for (int i=0; i<image_cnt; i++)
 	{
-		sprintf(filename, "img/rgb_%02d.jpg",i);
+		sprintf(filename,"/src/openFrameworks/addons/kinect/ofxKinect/bin/data/ir_%02d.jpg",i);
 		
 		
 		IplImage* img = cvLoadImage(filename, 1);
