@@ -35,7 +35,10 @@ int main (int argc, char * const argv[]) {
 	
 	
 	// adapt this path and the number of imagePairs
-	char prefix[] = "/Users/engelhard/Desktop/rgbdemo-0.2.1-Source/bin/grab1";
+	// char prefix[] = "/Users/engelhard/Desktop/rgbdemo-0.2.1-Source/bin/grab1";
+	
+	char prefix[] = "/src/openFrameworks/addons/kinect/ofxKinect/bin/data/";
+	
 	
 	// images: ($prefix)/view????/color.png
 	// where ???? = %04d, i
@@ -73,10 +76,12 @@ int main (int argc, char * const argv[]) {
 	
 	for (int i=0; i< image_cnt; i++)
 	{
-		sprintf(filename_rgb,"%s/view%04d/color.png",prefix, i);
+		sprintf(filename_rgb,"rgb%02d.jpg",prefix, i);
+		// sprintf(filename_rgb,"%s/view%04d/color.png",prefix, i);
 		IplImage* rgb_img = cvLoadImage(filename_rgb, 1);
 		
-		sprintf(filename_int,"%s/view%04d/intensity.png",prefix, i);
+		// sprintf(filename_int,"%s/view%04d/intensity.png",prefix, i);
+		sprintf(filename_rgb,"rgb%02d.jpg",prefix, i);
 		IplImage* intensity_img = cvLoadImage(filename_int, 1);
 		
 		
