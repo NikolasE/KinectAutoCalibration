@@ -14,35 +14,30 @@ using namespace std;
 
 int main (int argc, char * const argv[]) {
 	
+// activate to see the refined chessboard corners
+// #define SHOW_CORNERS	
 	
-// activate to get intrinsic parameters and distortion for both cameras	
-#define CALIBRATION
 	
-// activate to get stereo calibration (needs CALIBRATION to be activated)
+// activate to compute stereo calibration
 #define STEREO_CALIBRATION	
 	
-// load calibration for one camera and show undistorted images
-// #define VIEW_CALIBRATION
+// activate to load calibration for one camera and show undistorted images
+// #define VIEW_UNDISTORT
+	
 	
 	// theses values depend on the used chessboard
 	const int corner_cnt_x = 10;
 	const int corner_cnt_y = 7;
 	const float square_size = 2.5;
+	const char prefix[] = "YOUR_PATH/bin/grab1";
+	const int image_cnt = 90;
+	
+
 	
 	int good_picture_cnt = 0;
 	
 	const int corner_cnt = corner_cnt_x*corner_cnt_y;
 	
-	
-	// adapt this path and the number of imagePairs
-	// char prefix[] = "/Users/engelhard/Desktop/rgbdemo-0.2.1-Source/bin/grab1";
-	
-	char prefix[] = "/src/openFrameworks/addons/kinect/ofxKinect/bin/data/";
-	
-	
-	// images: ($prefix)/view????/color.png
-	// where ???? = %04d, i
-	int image_cnt = 5;
 	
 	cout << "image_cnt: " << image_cnt << endl;
 	
@@ -55,8 +50,6 @@ int main (int argc, char * const argv[]) {
 	CvMat *camera_matrix_rgb;
 	CvMat* distortion_coeffs_rgb;
 	
-	
-#ifdef CALIBRATION
 	
 	int N = image_cnt*7*10;
 	
@@ -76,12 +69,12 @@ int main (int argc, char * const argv[]) {
 	
 	for (int i=0; i< image_cnt; i++)
 	{
-		sprintf(filename_rgb,"rgb%02d.jpg",prefix, i);
-		// sprintf(filename_rgb,"%s/view%04d/color.png",prefix, i);
+		cout << "cnt: " << i << endl;
+		
+		sprintf(filename_rgb,"%s/view%04d/color.png",prefix, i);
 		IplImage* rgb_img = cvLoadImage(filename_rgb, 1);
 		
-		// sprintf(filename_int,"%s/view%04d/intensity.png",prefix, i);
-		sprintf(filename_rgb,"rgb%02d.jpg",prefix, i);
+		sprintf(filename_int,"%s/view%04d/intensity.png",prefix, i);
 		IplImage* intensity_img = cvLoadImage(filename_int, 1);
 		
 		
@@ -127,18 +120,18 @@ int main (int argc, char * const argv[]) {
 		
 		
 		
-		// copy Points into calibration array:
+		// copy Points into calibration arrays:
 		for (int j=0; j<corner_cnt; j++)
 		{	
-			cvSetReal2D(object_points, good_picture_cnt*corner_cnt+j,0, j%corner_cnt_x*square_size); // width and height of small square: 2.5cm
+			cvSetReal2D(object_points, good_picture_cnt*corner_cnt+j,0, j%corner_cnt_x*square_size);
 			cvSetReal2D(object_points, good_picture_cnt*corner_cnt+j,1, j/corner_cnt_x*square_size);
 			cvSetReal2D(object_points, good_picture_cnt*corner_cnt+j,2, 0);
 			
-			cvSetReal2D(image_points_ir, good_picture_cnt*corner_cnt+j,0, corners_rgb[j].x); 
-			cvSetReal2D(image_points_ir, good_picture_cnt*corner_cnt+j,1, corners_rgb[j].y);
+			cvSetReal2D(image_points_ir, good_picture_cnt*corner_cnt+j,0, corners_int[j].x); 
+			cvSetReal2D(image_points_ir, good_picture_cnt*corner_cnt+j,1, corners_int[j].y);
 			
-			cvSetReal2D(image_points_rgb, good_picture_cnt*corner_cnt+j,0, corners_int[j].x); 
-			cvSetReal2D(image_points_rgb, good_picture_cnt*corner_cnt+j,1, corners_int[j].y);
+			cvSetReal2D(image_points_rgb, good_picture_cnt*corner_cnt+j,0, corners_rgb[j].x); 
+			cvSetReal2D(image_points_rgb, good_picture_cnt*corner_cnt+j,1, corners_rgb[j].y);
 		}
 		
 		cvSetReal1D(point_counts, i, corner_count);
@@ -146,20 +139,20 @@ int main (int argc, char * const argv[]) {
 		good_picture_cnt++;
 		
 		
-		// activate to see the refined chessboard corners
 		
-/*		
-		 cvNamedWindow("color.png");
-		 cvDrawChessboardCorners(rgb_img, cvSize(10,7), corners_rgb, corner_count,1);
-		 cvShowImage("color.png", rgb_img);
-		
+#ifdef SHOW_CORNERS		
+		cvNamedWindow("color.png");
 		cvNamedWindow("ir.png");
+
+		cvDrawChessboardCorners(rgb_img, cvSize(10,7), corners_rgb, corner_count,1);
+		cvShowImage("color.png", rgb_img);
+		
 		cvDrawChessboardCorners(intensity_img, cvSize(10,7), corners_int, corner_count,1);
 		cvShowImage("ir.png", intensity_img );
 		
 		
-		cvWaitKey(500);
-	*/	 
+		cvWaitKey(100);
+#endif
 		
 		
 	}
@@ -171,7 +164,7 @@ int main (int argc, char * const argv[]) {
 	CvMat* object_points_small = cvCreateMat(found_corner_cnt, 3, CV_32FC1);
 	CvMat* image_points_ir_small = cvCreateMat(found_corner_cnt, 2, CV_32FC1);
 	CvMat* image_points_rgb_small = cvCreateMat(found_corner_cnt, 2, CV_32FC1);
-
+	
 	CvMat* point_counts_small = cvCreateMat(good_picture_cnt, 1, CV_32SC1);
 	
 	// TODO: there has to be a smarter way...
@@ -199,9 +192,6 @@ int main (int argc, char * const argv[]) {
 	for (int h=0; h < good_picture_cnt; h++)
 		cvSetReal1D(point_counts_small, h, corner_cnt);
 	
-	
-	
-	
 	// calibrate both cameras:
 	
 	// cameras are pretty good, fourth parameter is for fisheye-cams only 
@@ -212,8 +202,6 @@ int main (int argc, char * const argv[]) {
 	
 	cvSave("Intrinsics_IR.xml",camera_matrix_ir); 
 	cvSave("Distortion_IR.xml",distortion_coeffs_ir);
-	cout << "infraRed: calibrated" << endl;
-	
 	
 	cvSet1D(distortion_coeffs_rgb, 4, cvScalarAll(0));
 	
@@ -222,22 +210,15 @@ int main (int argc, char * const argv[]) {
 	
 	cvSave("Intrinsics_RGB.xml",camera_matrix_rgb); 
 	cvSave("Distortion_RGB.xml",distortion_coeffs_rgb);
-	cout << "RGB: calibrated" << endl;
-	
-	
-#endif
-	
 	
 	
 #ifdef STEREO_CALIBRATION	
 	
-	cout << "Starting Stereo Calibration" << endl;
+	// cout << "Starting Stereo Calibration" << endl;
 	CvMat* R = cvCreateMat(3, 3, CV_32FC1);
 	CvMat* T = cvCreateMat(3, 1, CV_32FC1);
 	CvMat* E = cvCreateMat(3,3,CV_64F);
 	CvMat* F = cvCreateMat(3,3,CV_64F);
-	
-	
 	
 	
 	// the core function:
@@ -252,53 +233,45 @@ int main (int argc, char * const argv[]) {
 					  cvTermCriteria(CV_TERMCRIT_ITER + CV_TERMCRIT_EPS, 100, 1e-5), CV_CALIB_FIX_INTRINSIC);
 	
 	
+	cout << "R:" << endl;
+	for (int i=0; i<3; i++)
+	{
+		for (int j=0; j<3; j++)
+			cout << cvGet2D(R, i, j).val[0] << " ";
+		cout << endl;
+	}
 	
-	// compute calibration errors: (currently only rgb)
-	double err = computeError(F,
-						 image_points_rgb_small,
-						 image_points_ir_small, 
-						 distortion_coeffs_rgb,
-						 distortion_coeffs_ir, 
-						 camera_matrix_rgb, 
-						 camera_matrix_ir);
-	
-	cout << "Error: " << err << endl;
-	
-	
-	
-	/*	cout << "R:" << endl;
-	 for (int i=0; i<3; i++)
-	 {
-	 for (int j=0; j<3; j++)
-	 cout << cvGet2D(R, i, j).val[0] << " ";
-	 cout << endl;
-	 }
-	 */	
-	cout << "T:" << endl;
+	cout << "T:   ";
 	for (int i=0; i<3; i++)
 	{
 		cout << cvGet1D(T, i).val[0] << " ";
 	}
 	cout << endl;
 	
+	
+	
+	// compute calibration errors: (currently only rgb)
+	double err = computeError(F,
+							  image_points_rgb_small,
+							  image_points_ir_small, 
+							  distortion_coeffs_rgb,
+							  distortion_coeffs_ir, 
+							  camera_matrix_rgb, 
+							  camera_matrix_ir);
+	
+	cout << "Error: " << err << endl;
+	
+	
+	
 	cvSave("kinect_R.xml", R);
 	cvSave("kinect_T.xml", T);
 	
 	
-	
 #endif
+ 
 	
 	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-#ifdef VIEW_CALIBRATION
+#ifdef VIEW_UNDISTORT
 	
 	
 	IplImage* map_x = cvCreateImage( cvSize(640,480), IPL_DEPTH_32F, 1 ); 
@@ -309,27 +282,35 @@ int main (int argc, char * const argv[]) {
 	CvMat *	distortion_coeffs = (CvMat*)cvLoad("Distortion_RGB.xml"); 
 	
 	
-	cvInitUndistortMap(camera_matrix, distortion_coeffs, map_x, map_y);
 	
 	cvNamedWindow("undistorted");
 	cvNamedWindow("original");
 	
 	char filename[100];
 	
+	
+	cvInitUndistortMap(camera_matrix, distortion_coeffs, map_x, map_y);
+	
+	
 	for (int i=0; i<image_cnt; i++)
 	{
-		sprintf(filename,"/src/openFrameworks/addons/kinect/ofxKinect/bin/data/ir_%02d.jpg",i);
+		sprintf(filename,"%s/rgb_%02d.jpg",prefix, i);
 		
 		
 		IplImage* img = cvLoadImage(filename, 1);
 		IplImage* img_undistorted = cvCloneImage(img);
 		
-		cvRemap(img, img_undistorted, map_x, map_y,CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS, CV_RGB(255,0,0));
+		cvRemap(img, img_undistorted, map_x, map_y, CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS, CV_RGB(255,0,0));
 		
 		cvShowImage("original", img);
 		cvShowImage("undistorted", img_undistorted);
 		
-		cvWaitKey(300);
+		
+		sprintf(filename,"%s/rgb_DIST_%02d.jpg",prefix, i);
+		cvSaveImage(filename, img_undistorted);
+		return 0;
+		
+		cvWaitKey( 500 );
 	}
 	
 	
