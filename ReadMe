@@ -1,22 +1,14 @@
 
-// Difference to master-branch:
 
-- NOT tested (compiles, runs, values seem ok)
-- different file structure
-- can cope with images where the chessboard can't be found
-- computation of reprojection error via epilines
-
-
-
-This is an application to calibrate the Kinect.
+This is an application to calibrate the Kinect cameras.
 
 Input are pairs of RGB and IR images of a chessboard. 
 The nice thing about this implementation is the lack
-of needed userinput. Since the raw IR-image is used, 
-the chessboardcorners can be detected automatically 
-(at least in about 90% when I tried). 
+of manually clicking on corners. Since the raw IR-image is used, 
+the chessboardcorners can be detected automatically.
 
-Branch testing:
+See manual at http://www.informatik.uni-freiburg.de/~engelhar/calibration.html
+
 
 The images are expecting in the folder structure 
     ($prefix)/view????/color.png and
